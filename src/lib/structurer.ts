@@ -1,9 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { StructuredSyllabus } from '@/types/syllabus'
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+function getClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set. Add it to your .env file.')
+  return new Anthropic({ apiKey })
+}
 
 const SUBJECT_EMOJIS: Record<string, string> = {
   math: '📐',
@@ -122,7 +124,7 @@ Rules:
 Syllabus text:
 ${rawText.slice(0, 15000)}`
 
-  const response = await client.messages.create({
+  const response = await getClient().messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     messages: [{ role: 'user', content: prompt }],
