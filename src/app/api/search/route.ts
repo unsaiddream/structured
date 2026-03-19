@@ -11,27 +11,9 @@ export interface SearchHit {
   tab: 'overview' | 'deadlines' | 'grades' | 'schedule' | 'policies'
   icon: string
   title: string
-  snippet: string
+  fullText: string   // complete untruncated text for display
   terms: string[]
   score: number
-}
-
-function escapeRegex(s: string) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-function getSnippet(text: string, terms: string[], maxLen = 130): string {
-  if (!text) return ''
-  const lower = text.toLowerCase()
-  const positions = terms
-    .map((t) => lower.indexOf(t.toLowerCase()))
-    .filter((i) => i >= 0)
-    .sort((a, b) => a - b)
-  if (!positions.length) return text.slice(0, maxLen)
-  const center = positions[0]
-  const start = Math.max(0, center - 45)
-  const end = Math.min(text.length, center + maxLen - 45)
-  return (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '')
 }
 
 function matches(text: string | null | undefined, terms: string[]): boolean {
@@ -106,7 +88,7 @@ export async function GET(req: NextRequest) {
             tab: 'deadlines',
             icon,
             title: d.title,
-            snippet: getSnippet(text, terms),
+            fullText: text,
             terms,
             score: scoreText(d.title, terms) * 1.2 + scoreText(d.description || '', terms) * 0.8,
           })
@@ -126,7 +108,7 @@ export async function GET(req: NextRequest) {
             tab: 'schedule',
             icon: '🗓️',
             title: t.title,
-            snippet: getSnippet(text, terms),
+            fullText: text,
             terms,
             score: scoreText(t.title, terms) * 1.2 + scoreText(t.description || '', terms) * 0.8,
           })
@@ -146,7 +128,7 @@ export async function GET(req: NextRequest) {
             tab: 'grades',
             icon: '📊',
             title: g.title,
-            snippet: getSnippet(text, terms),
+            fullText: text,
             terms,
             score: scoreText(g.title, terms) * 1.2 + scoreText(g.description || '', terms) * 0.8,
           })
@@ -165,7 +147,7 @@ export async function GET(req: NextRequest) {
             tab: 'overview',
             icon: '🎯',
             title: 'Цели курса',
-            snippet: getSnippet(obj, terms),
+            fullText: obj,
             terms,
             score: scoreText(obj, terms),
           })
@@ -185,7 +167,7 @@ export async function GET(req: NextRequest) {
             tab: 'policies',
             icon: '📜',
             title: p.title,
-            snippet: getSnippet(text, terms),
+            fullText: text,
             terms,
             score: scoreText(p.title, terms) * 1.2 + scoreText(p.content, terms) * 0.8,
           })
@@ -203,7 +185,7 @@ export async function GET(req: NextRequest) {
           tab: 'overview',
           icon: '📋',
           title: 'Описание курса',
-          snippet: getSnippet(structured.description, terms),
+          fullText: structured.description,
           terms,
           score: scoreText(structured.description, terms),
         })
