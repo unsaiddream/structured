@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="public/banner.svg" alt="SyllabusAI Banner" width="100%"/>
+  <img src="public/banner.svg" alt="structured" width="100%"/>
 </p>
 
 <p align="center">
-  <b>Загружай силлабусы → получай красивую структуру за секунды</b>
+  <b>Upload syllabuses → get clean structure in seconds</b>
 </p>
 
 <p align="center">
@@ -16,9 +16,9 @@
 
 ---
 
-## ✨ Что это
+## ✨ What it is
 
-**SyllabusAI** — веб-приложение для студентов, которое превращает скучные многостраничные силлабусы в удобные структурированные карточки. Загружаешь PDF или DOCX, Claude AI разбирает содержимое и выдаёт всё важное в красивом виде.
+**structured** — a web app for students that turns dense, multi-page syllabuses into clean, structured cards. Upload a PDF or DOCX, Claude AI parses the content and surfaces everything that matters.
 
 ---
 

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SyllabusAI — Умный органайзер силлабусов",
-  description: "Загружай силлабусы, получай структурированный обзор предметов, дедлайнов и оценок",
+  title: "structured — AI syllabus organizer",
+  description: "Upload syllabuses, get a clean structured overview of subjects, deadlines and grades",
   icons: {
     icon: "/logo.svg",
     apple: "/logo.svg",
