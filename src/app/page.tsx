@@ -143,7 +143,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        <div className="mb-6">
+        <div className="mb-6 relative z-20">
           <SearchBar
             onResults={(results) => { setDisplayed(results as Syllabus[]); setIsSearching(true) }}
             onClear={() => { setDisplayed(syllabuses); setIsSearching(false) }}
