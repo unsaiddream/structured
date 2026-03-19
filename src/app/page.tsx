@@ -30,8 +30,9 @@ export default function Dashboard() {
     try {
       const res = await fetch('/api/syllabuses')
       const data = await res.json()
-      setSyllabuses(data)
-      setDisplayed(data)
+      const list = Array.isArray(data) ? data : []
+      setSyllabuses(list)
+      setDisplayed(list)
     } finally {
       setLoading(false)
     }

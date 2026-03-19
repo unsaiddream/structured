@@ -43,7 +43,8 @@ export default function DeadlinesPage() {
   useEffect(() => {
     fetch('/api/syllabuses')
       .then(r => r.json())
-      .then(syllabuses => {
+      .then(data => {
+        const syllabuses = Array.isArray(data) ? data : []
         const all: DeadlineWithMeta[] = syllabuses.flatMap((s: { id: string; subject: string; structured: string; deadlines: DeadlineWithMeta[] }) => {
           const structured: StructuredSyllabus = JSON.parse(s.structured)
           return s.deadlines.map((d: DeadlineWithMeta) => ({
