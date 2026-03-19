@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, X, Command } from 'lucide-react'
+import { Search, X, Command, ArrowRight, FileText, Clock, BookOpen } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import type { SearchHit } from '@/app/api/search/route'
 
@@ -12,6 +12,32 @@ const TAB_LABELS: Record<string, string> = {
   schedule: 'Расписание',
   policies: 'Правила',
   fulltext: 'Полный текст',
+}
+
+const TAB_COLORS: Record<string, string> = {
+  overview: 'bg-blue-100 text-blue-600',
+  deadlines: 'bg-red-100 text-red-600',
+  grades: 'bg-emerald-100 text-emerald-600',
+  schedule: 'bg-violet-100 text-violet-600',
+  policies: 'bg-amber-100 text-amber-600',
+  fulltext: 'bg-gray-100 text-gray-600',
+}
+
+/** Extract a context window around the first match */
+function getContextSnippet(text: string, terms: string[], maxLen = 200): string {
+  if (text.length <= maxLen) return text
+  const lower = text.toLowerCase()
+  let earliest = text.length
+  for (const t of terms) {
+    const idx = lower.indexOf(t.toLowerCase())
+    if (idx !== -1 && idx < earliest) earliest = idx
+  }
+  const start = Math.max(0, earliest - 60)
+  const end = Math.min(text.length, start + maxLen)
+  let snippet = text.slice(start, end)
+  if (start > 0) snippet = '...' + snippet
+  if (end < text.length) snippet = snippet + '...'
+  return snippet
 }
 
 function Highlighted({ text, terms }: { text: string; terms: string[] }) {
@@ -54,8 +80,6 @@ export default function SearchBar({ onResults, onClear }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const selectedItemRef = useRef<HTMLButtonElement | null>(null)
-  // Track last keyboard navigation time — onMouseEnter ignores events
-  // fired within 150ms of a key press (triggered by scroll, not real mouse move)
   const lastKeyTimeRef = useRef(0)
 
   const search = useCallback(
@@ -167,25 +191,25 @@ export default function SearchBar({ onResults, onClear }: Props) {
   return (
     <div className="relative">
       {/* Input */}
-      <div className="relative">
-        <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${isSearching ? 'text-indigo-500 animate-pulse' : 'text-gray-400'}`} />
+      <div className="relative group">
+        <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${isSearching ? 'text-indigo-500 animate-pulse' : 'text-gray-400 group-focus-within:text-indigo-500'}`} />
         <input
           ref={inputRef}
           type="text"
-          placeholder="Поиск… попробуй psychology:assignment1 criteria"
+          placeholder="Поиск по силлабусам...  psychology:exam, attendance"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => hits.length > 0 && setShowPanel(true)}
           onKeyDown={handleKeyDown}
-          className="w-full pl-11 pr-24 py-3.5 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-all shadow-sm"
+          className="w-full pl-11 pr-24 py-3.5 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300/60 focus:border-indigo-400 transition-all shadow-sm hover:shadow-md focus:shadow-md"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
           {query ? (
-            <button onClick={clear} className="text-gray-400 hover:text-gray-600 p-0.5">
+            <button onClick={clear} className="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded-lg transition-all">
               <X className="w-4 h-4" />
             </button>
           ) : (
-            <div className="hidden sm:flex items-center gap-0.5 text-xs text-gray-300 bg-gray-100 px-2 py-1 rounded-lg">
+            <div className="hidden sm:flex items-center gap-0.5 text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-lg border border-gray-200/50">
               <Command className="w-3 h-3" /><span>K</span>
             </div>
           )}
@@ -194,13 +218,13 @@ export default function SearchBar({ onResults, onClear }: Props) {
 
       {/* Parsed query hint */}
       {hasSubjectFilter && query.length > colonIdx + 1 && (
-        <div className="mt-2 flex items-center gap-2 px-1">
+        <div className="mt-2 flex items-center gap-2 px-1 animate-fadeIn">
           <span className="text-xs text-gray-400">Ищем в</span>
           <span className="text-xs font-semibold px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">{subjectPart}</span>
           {contentPart && (
             <>
               <span className="text-xs text-gray-400">по запросу</span>
-              <span className="text-xs font-medium text-gray-600">«{contentPart}»</span>
+              <span className="text-xs font-medium text-gray-600">&laquo;{contentPart}&raquo;</span>
             </>
           )}
         </div>
@@ -210,8 +234,8 @@ export default function SearchBar({ onResults, onClear }: Props) {
       {showPanel && (
         <div
           ref={panelRef}
-          className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200/80 rounded-2xl shadow-2xl z-50 overflow-hidden"
-          style={{ maxHeight: '70vh', overflowY: 'auto' }}
+          className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200/80 rounded-2xl shadow-2xl z-50 overflow-hidden animate-slideDown"
+          style={{ maxHeight: '72vh', overflowY: 'auto' }}
         >
           {hits.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-gray-400">
@@ -223,12 +247,16 @@ export default function SearchBar({ onResults, onClear }: Props) {
             </div>
           ) : (
             <>
-              <div className="sticky top-0 bg-white/95 backdrop-blur-sm px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
+              <div className="sticky top-0 bg-white/95 backdrop-blur-sm px-4 py-2.5 border-b border-gray-100 flex items-center justify-between z-10">
                 <span className="text-xs font-medium text-gray-500">
                   {hits.length} {hits.length === 1 ? 'результат' : hits.length < 5 ? 'результата' : 'результатов'}
+                  {' '}в {Object.keys(grouped).length} {Object.keys(grouped).length === 1 ? 'предмете' : 'предметах'}
                 </span>
-                <span className="text-xs text-gray-300 hidden sm:block">
-                  ↑↓ навигация · Enter открыть · Esc закрыть
+                <span className="text-xs text-gray-300 hidden sm:flex items-center gap-2">
+                  <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono">↑↓</kbd>
+                  <span>навигация</span>
+                  <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono">Enter</kbd>
+                  <span>открыть</span>
                 </span>
               </div>
 
@@ -237,7 +265,7 @@ export default function SearchBar({ onResults, onClear }: Props) {
                 return (
                   <div key={syllabusId} className="border-b border-gray-100/70 last:border-0">
                     {/* Syllabus header */}
-                    <div className="flex items-center gap-2.5 px-4 py-2.5 bg-gradient-to-r from-gray-50 to-white">
+                    <div className="flex items-center gap-2.5 px-4 py-2.5 bg-gradient-to-r from-gray-50/80 to-white">
                       <span className="text-lg leading-none">{first.emoji}</span>
                       <span className="text-sm font-semibold text-gray-800 truncate">{first.subject}</span>
                       {first.courseCode && (
@@ -245,12 +273,19 @@ export default function SearchBar({ onResults, onClear }: Props) {
                           {first.courseCode}
                         </span>
                       )}
+                      <span className="ml-auto text-[11px] text-gray-400">
+                        {syllabusHits.length} совп.
+                      </span>
                     </div>
 
                     {/* Hits */}
                     {syllabusHits.map((hit) => {
                       const idx = globalIdx++
                       const isSelected = idx === selectedIdx
+                      const isFulltext = hit.tab === 'fulltext'
+                      const displayText = isFulltext
+                        ? getContextSnippet(hit.fullText, hit.terms, 180)
+                        : hit.fullText
                       return (
                         <button
                           key={`${hit.syllabusId}-${hit.section}-${idx}`}
@@ -259,34 +294,41 @@ export default function SearchBar({ onResults, onClear }: Props) {
                           onMouseEnter={() => {
                             if (Date.now() - lastKeyTimeRef.current > 150) setSelectedIdx(idx)
                           }}
-                          className={`w-full text-left px-4 py-3.5 flex items-start gap-3 border-l-2 transition-colors ${
-                            isSelected ? 'bg-indigo-50 border-indigo-400' : 'border-transparent hover:bg-gray-50/80'
+                          className={`w-full text-left px-4 py-3 flex items-start gap-3 border-l-2 transition-all duration-150 ${
+                            isSelected
+                              ? 'bg-indigo-50/80 border-indigo-400'
+                              : 'border-transparent hover:bg-gray-50/80'
                           }`}
                         >
                           <span className="text-base shrink-0 mt-0.5">{hit.icon}</span>
                           <div className="flex-1 min-w-0">
                             {/* Title row */}
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex items-center gap-2 mb-1.5">
                               <span className="text-sm font-semibold text-gray-900 truncate">
                                 <Highlighted text={hit.title} terms={hit.terms} />
                               </span>
-                              <span className={`shrink-0 text-[11px] px-2 py-0.5 rounded-full font-medium transition-colors ${
-                                isSelected ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400'
-                              }`}>
+                              <span className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full font-medium ${TAB_COLORS[hit.tab] || 'bg-gray-100 text-gray-500'}`}>
                                 {TAB_LABELS[hit.tab]}
                               </span>
                             </div>
-                            {/* Full text */}
-                            <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">
-                              <Highlighted text={hit.fullText} terms={hit.terms} />
+                            {/* Context text */}
+                            <p className={`text-xs leading-relaxed ${isFulltext ? 'text-gray-500 font-mono' : 'text-gray-600'} ${isFulltext ? 'whitespace-pre-wrap' : ''}`}>
+                              <Highlighted text={displayText} terms={hit.terms} />
                             </p>
                           </div>
+                          <ArrowRight className={`w-3.5 h-3.5 shrink-0 mt-1 transition-all ${isSelected ? 'text-indigo-400 translate-x-0' : 'text-gray-300 -translate-x-1 opacity-0'}`} />
                         </button>
                       )
                     })}
                   </div>
                 )
               })}
+
+              {/* Footer hint */}
+              <div className="px-4 py-2 bg-gray-50/50 border-t border-gray-100 flex items-center gap-4 text-[11px] text-gray-400">
+                <span className="flex items-center gap-1"><FileText className="w-3 h-3" /> Полный текст доступен во вкладке</span>
+                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Поиск по всему содержимому</span>
+              </div>
             </>
           )}
         </div>
