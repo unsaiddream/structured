@@ -8,7 +8,7 @@ export interface SearchHit {
   courseCode: string | null
   emoji: string
   section: string
-  tab: 'overview' | 'deadlines' | 'grades' | 'schedule' | 'policies'
+  tab: 'overview' | 'deadlines' | 'grades' | 'schedule' | 'policies' | 'fulltext'
   icon: string
   title: string
   fullText: string   // complete untruncated text for display
@@ -190,11 +190,44 @@ export async function GET(req: NextRequest) {
           score: scoreText(structured.description, terms),
         })
       }
+
+      // Full raw text — split into paragraphs, surface matching ones
+      if (s.rawText && !s.rawText.startsWith('[Scanned')) {
+        const paragraphs = s.rawText
+          .split(/\n{2,}/)
+          .map((p) => p.trim())
+          .filter((p) => p.length > 30)
+
+        let addedFromRaw = 0
+        for (const para of paragraphs) {
+          if (addedFromRaw >= 5) break
+          if (!matches(para, terms)) continue
+          // Skip if this paragraph is basically the same as an already-found hit
+          const alreadyCovered = hits.some(
+            (h) => h.syllabusId === s.id && para.toLowerCase().includes(h.title.toLowerCase())
+          )
+          if (alreadyCovered) continue
+          hits.push({
+            syllabusId: s.id,
+            subject: s.subject,
+            courseCode: s.courseCode,
+            emoji,
+            section: 'rawtext',
+            tab: 'fulltext',
+            icon: '📄',
+            title: para.split('\n')[0].slice(0, 60) || 'Полный текст',
+            fullText: para,
+            terms,
+            score: scoreText(para, terms) * 0.9,
+          })
+          addedFromRaw++
+        }
+      }
     }
 
     hits.sort((a, b) => b.score - a.score)
 
-    return NextResponse.json({ syllabuses: filtered, hits: hits.slice(0, 25) })
+    return NextResponse.json({ syllabuses: filtered, hits: hits.slice(0, 30) })
   } catch (error) {
     console.error('Search error:', error)
     return NextResponse.json({ error: 'Search failed' }, { status: 500 })

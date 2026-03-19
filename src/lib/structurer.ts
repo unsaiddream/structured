@@ -145,20 +145,28 @@ ${rawText.slice(0, 15000)}`
   return parsed
 }
 
-const VISION_PROMPT = `You are analyzing scanned pages of a university syllabus. Extract all key information from these images and return ONLY a JSON object (no markdown, no explanation) with this structure:
+const VISION_PROMPT = `You are digitizing a scanned university syllabus. Do exactly two things:
 
+PART 1 — Full text:
+Extract ALL text from the scanned pages exactly as it appears. Preserve every heading, table (as aligned plain text), list, policy, schedule row, grade weight, contact info — everything readable. Keep the reading order and use line breaks to maintain structure.
+
+PART 2 — Structured data:
+Extract key fields as JSON.
+
+Respond ONLY in this exact format (no extra text outside the tags):
+
+<fulltext>
+[complete document text here]
+</fulltext>
+<json>
 {"subject":"Full course name","courseCode":"CS101","professor":"Name","semester":"Fall","year":2024,"credits":3,"schedule":"Days/times","room":"Location","officeHours":"Hours","description":"1-2 sentence summary","objectives":["objective"],"topics":[{"week":"Week 1","date":"Jan 15","title":"Topic","description":"Brief"}],"gradeBreakdown":[{"title":"Midterm","weight":25,"description":"Details"}],"deadlines":[{"title":"Assignment 1","date":"2024-02-15","dateText":"Feb 15","type":"assignment","description":"Details","weight":10}],"requiredMaterials":["Textbook"],"policies":[{"title":"Attendance","content":"Policy text"}],"contactInfo":{"email":"prof@uni.edu","phone":"555-1234","officeLocation":"Bldg 101"}}
+</json>
 
-Rules:
-- Extract everything visible in the scanned pages
-- deadline types: "assignment", "exam", "quiz", "project", "other"
-- dates in ISO format YYYY-MM-DD when possible
-- weights are percentages (numbers)
-- Return ONLY valid JSON, nothing else`
+Rules for JSON: deadline types are "assignment","exam","quiz","project","other". Dates in YYYY-MM-DD. Weights are numbers (percentages).`
 
 export async function structureSyllabusFromImages(
   images: { data: string; mediaType: 'image/jpeg' }[]
-): Promise<StructuredSyllabus> {
+): Promise<{ structured: StructuredSyllabus; rawText: string }> {
   const content: Anthropic.MessageParam['content'] = [
     { type: 'text', text: VISION_PROMPT },
     ...images.map((img) => ({
@@ -169,20 +177,29 @@ export async function structureSyllabusFromImages(
 
   const response = await getClient().messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
+    max_tokens: 8192,
     messages: [{ role: 'user', content }],
   })
 
   const responseContent = response.content[0]
   if (responseContent.type !== 'text') throw new Error('Unexpected response type from Claude')
 
-  let jsonText = responseContent.text.trim()
-  const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
-  if (jsonMatch) jsonText = jsonMatch[1]
+  const text = responseContent.text.trim()
+
+  // Extract full text between <fulltext> tags
+  const fulltextMatch = text.match(/<fulltext>\s*([\s\S]*?)\s*<\/fulltext>/)
+  const rawText = fulltextMatch ? fulltextMatch[1].trim() : ''
+
+  // Extract JSON between <json> tags
+  const jsonTagMatch = text.match(/<json>\s*([\s\S]*?)\s*<\/json>/)
+  let jsonText = jsonTagMatch ? jsonTagMatch[1].trim() : text
+  // Fallback: strip markdown code fences if present
+  const fenceMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+  if (fenceMatch) jsonText = fenceMatch[1]
 
   const parsed = JSON.parse(jsonText) as StructuredSyllabus
   parsed.emoji = getSubjectEmoji(parsed.subject)
   parsed.color = getSubjectColor(parsed.subject)
 
-  return parsed
+  return { structured: parsed, rawText }
 }

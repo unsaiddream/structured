@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
       fileSize = body.fileSize ?? 0
 
       if (body.images?.length) {
-        // Scanned PDF — use Claude Vision directly
-        const structured = await structureSyllabusFromImages(body.images)
+        // Scanned PDF — Claude Vision extracts full text + structure
+        const { structured, rawText: ocrText } = await structureSyllabusFromImages(body.images)
         const syllabus = await prisma.syllabus.create({
           data: {
             fileName, fileSize,
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
             professor: structured.professor,
             semester: structured.semester,
             year: structured.year,
-            rawText: '[Scanned document — processed via Claude Vision]',
+            rawText: ocrText || '[Scanned document]',
             structured: JSON.stringify(structured),
             deadlines: { create: (structured.deadlines || []).map((d) => ({ title: d.title, date: d.date ? new Date(d.date) : null, dateText: d.dateText, type: d.type, description: d.description, weight: d.weight })) },
             grades: { create: (structured.gradeBreakdown || []).map((g) => ({ title: g.title, weight: g.weight, description: g.description })) },

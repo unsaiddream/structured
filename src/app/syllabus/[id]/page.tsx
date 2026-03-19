@@ -46,7 +46,7 @@ const DEADLINE_COLORS: Record<string, string> = {
   other: 'bg-gray-100 text-gray-700 border-gray-200',
 }
 
-type TabId = 'overview' | 'schedule' | 'grades' | 'deadlines' | 'policies'
+type TabId = 'overview' | 'schedule' | 'grades' | 'deadlines' | 'policies' | 'fulltext'
 
 interface SyllabusData {
   id: string
@@ -56,6 +56,7 @@ interface SyllabusData {
   professor: string | null
   semester: string | null
   year: number | null
+  rawText: string
   structured: string
   deadlines: {
     id: string; title: string; date: string | null
@@ -82,7 +83,7 @@ export default function SyllabusPage() {
     const hl = params.get('hl')
     const tab = params.get('tab') as TabId | null
     if (hl) setHlTerms(hl.split(',').filter(Boolean))
-    if (tab && ['overview', 'deadlines', 'grades', 'schedule', 'policies'].includes(tab)) {
+    if (tab && ['overview', 'deadlines', 'grades', 'schedule', 'policies', 'fulltext'].includes(tab)) {
       setActiveTab(tab)
     }
   }, [])
@@ -128,13 +129,16 @@ export default function SyllabusPage() {
 
   const totalWeight = data.grades.reduce((sum, g) => sum + g.weight, 0)
 
-  const tabs = [
+  const hasFullText = data.rawText && !data.rawText.startsWith('[Scanned')
+
+  const tabs: { id: TabId; label: string }[] = [
     { id: 'overview', label: '📋 Обзор' },
     { id: 'deadlines', label: `📅 Дедлайны (${data.deadlines.length})` },
     { id: 'grades', label: '📊 Оценки' },
     { id: 'schedule', label: `🗓️ Расписание (${structured.topics?.length || 0})` },
     { id: 'policies', label: '📜 Правила' },
-  ] as const
+    ...(hasFullText ? [{ id: 'fulltext' as TabId, label: '📄 Полный текст' }] : []),
+  ]
 
   return (
     <div className="min-h-screen bg-white/60">
@@ -501,6 +505,25 @@ export default function SyllabusPage() {
                 <p>Расписание не найдено в силлабусе</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Full Text Tab ────────────────────────────────────────────────── */}
+        {activeTab === 'fulltext' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 bg-gray-50/60">
+              <span className="text-sm font-semibold text-gray-700">📄 Полный текст силлабуса</span>
+              {hlTerms.length > 0 && (
+                <span className="text-xs text-gray-400 ml-auto">
+                  {hlTerms.length} {hlTerms.length === 1 ? 'слово' : 'слова'} подсвечено
+                </span>
+              )}
+            </div>
+            <div className="p-5 max-h-[72vh] overflow-y-auto">
+              <div className="text-sm text-gray-700 leading-relaxed font-mono whitespace-pre-wrap">
+                <Hl text={data.rawText} terms={hlTerms} />
+              </div>
+            </div>
           </div>
         )}
 
