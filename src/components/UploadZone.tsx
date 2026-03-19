@@ -9,8 +9,11 @@ interface UploadZoneProps {
 
 async function extractPDFText(file: File, onProgress: (msg: string) => void): Promise<string> {
   onProgress('📄 Читаем PDF в браузере...')
-  const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist')
-  GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+  const pdfjsLib = await import('pdfjs-dist')
+  const { getDocument, GlobalWorkerOptions, version } = pdfjsLib
+  // Worker URL matches the exact version loaded — avoids version mismatch errors
+  GlobalWorkerOptions.workerSrc =
+    `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`
 
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await getDocument({ data: arrayBuffer }).promise
