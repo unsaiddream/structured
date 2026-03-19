@@ -24,12 +24,18 @@ export default function UploadZone({ onUploadSuccess }: UploadZoneProps) {
 
       try {
         const res = await fetch('/api/upload', { method: 'POST', body: formData })
-        const data = await res.json()
+        const text = await res.text()
+        let data: { error?: string; syllabus?: { subject: string } }
+        try {
+          data = JSON.parse(text)
+        } catch {
+          throw new Error(`Server error (${res.status}): ${text.slice(0, 200)}`)
+        }
 
         if (!res.ok) throw new Error(data.error || 'Upload failed')
 
         setStatus('success')
-        setMessage(`✅ "${data.syllabus.subject}" added successfully!`)
+        setMessage(`✅ "${data.syllabus?.subject}" added successfully!`)
         onUploadSuccess()
       } catch (error) {
         setStatus('error')
