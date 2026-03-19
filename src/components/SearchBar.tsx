@@ -11,6 +11,7 @@ const TAB_LABELS: Record<string, string> = {
   grades: 'Оценки',
   schedule: 'Расписание',
   policies: 'Правила',
+  fulltext: 'Полный текст',
 }
 
 function Highlighted({ text, terms }: { text: string; terms: string[] }) {
@@ -53,9 +54,9 @@ export default function SearchBar({ onResults, onClear }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const selectedItemRef = useRef<HTMLButtonElement | null>(null)
-  // Prevents onMouseEnter from clobbering keyboard selection
-  const keyboardActiveRef = useRef(false)
-  const keyboardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Track last keyboard navigation time — onMouseEnter ignores events
+  // fired within 150ms of a key press (triggered by scroll, not real mouse move)
+  const lastKeyTimeRef = useRef(0)
 
   const search = useCallback(
     async (q: string) => {
@@ -122,21 +123,15 @@ export default function SearchBar({ onResults, onClear }: Props) {
     setShowPanel(false)
   }
 
-  const markKeyboardActive = () => {
-    keyboardActiveRef.current = true
-    if (keyboardTimerRef.current) clearTimeout(keyboardTimerRef.current)
-    keyboardTimerRef.current = setTimeout(() => { keyboardActiveRef.current = false }, 500)
-  }
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showPanel || !hits.length) return
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      markKeyboardActive()
+      lastKeyTimeRef.current = Date.now()
       setSelectedIdx((i) => Math.min(i + 1, hits.length - 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      markKeyboardActive()
+      lastKeyTimeRef.current = Date.now()
       setSelectedIdx((i) => Math.max(i - 1, 0))
     } else if (e.key === 'Enter' && selectedIdx >= 0) {
       e.preventDefault()
@@ -262,7 +257,7 @@ export default function SearchBar({ onResults, onClear }: Props) {
                           ref={isSelected ? selectedItemRef : null}
                           onClick={() => navigateToHit(hit)}
                           onMouseEnter={() => {
-                            if (!keyboardActiveRef.current) setSelectedIdx(idx)
+                            if (Date.now() - lastKeyTimeRef.current > 150) setSelectedIdx(idx)
                           }}
                           className={`w-full text-left px-4 py-3.5 flex items-start gap-3 border-l-2 transition-colors ${
                             isSelected ? 'bg-indigo-50 border-indigo-400' : 'border-transparent hover:bg-gray-50/80'
