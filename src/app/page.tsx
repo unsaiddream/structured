@@ -60,12 +60,12 @@ export default function Dashboard() {
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/60 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <Image src="/logo.svg" alt="SyllabusAI" width={36} height={36} className="drop-shadow-md" />
+            <Image src="/logo.svg" alt="structured" width={36} height={36} className="rounded-lg" />
             <div>
-              <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                SyllabusAI
+              <h1 className="text-lg font-bold tracking-tight text-gray-900">
+                structured
               </h1>
-              <p className="text-[10px] text-gray-400 leading-none">Умный органайзер</p>
+              <p className="text-[10px] text-gray-400 leading-none tracking-wide uppercase">AI organizer</p>
             </div>
           </Link>
 

@@ -1,72 +1,77 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" width="800" height="200">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" width="900" height="220">
   <defs>
-    <linearGradient id="bgBanner" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0f0c29"/>
-      <stop offset="50%" style="stop-color:#302b63"/>
-      <stop offset="100%" style="stop-color:#24243e"/>
+    <linearGradient id="accentLine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#6ee7fa"/>
+      <stop offset="100%" style="stop-color:#4f8ef7"/>
     </linearGradient>
-    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#818cf8"/>
-      <stop offset="100%" style="stop-color:#c084fc"/>
-    </linearGradient>
-    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6366f1"/>
-      <stop offset="100%" style="stop-color:#a855f7"/>
-    </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <filter id="softglow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
 
   <!-- Background -->
-  <rect width="800" height="200" fill="url(#bgBanner)" rx="16"/>
+  <rect width="900" height="220" rx="18" fill="#0d1117"/>
 
-  <!-- Subtle grid dots -->
-  <pattern id="dots" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
-    <circle cx="15" cy="15" r="1" fill="white" opacity="0.06"/>
+  <!-- Subtle grid -->
+  <pattern id="grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M40 0 L0 0 0 40" fill="none" stroke="#ffffff" stroke-width="0.4" opacity="0.04"/>
   </pattern>
-  <rect width="800" height="200" fill="url(#dots)" rx="16"/>
+  <rect width="900" height="220" fill="url(#grid)" rx="18"/>
 
-  <!-- Icon background -->
-  <rect x="40" y="60" width="80" height="80" rx="20" fill="url(#iconGrad)" opacity="0.9"/>
+  <!-- ── Mini logo (left) ────────────────────────────── -->
+  <!-- Bg square -->
+  <rect x="44" y="60" width="100" height="100" rx="22" fill="#161b22"/>
+  <rect x="44" y="60" width="100" height="100" rx="22" fill="none" stroke="#30363d" stroke-width="1"/>
 
-  <!-- Book -->
-  <rect x="52" y="74" width="38" height="48" rx="3" fill="white" opacity="0.95"/>
-  <rect x="52" y="74" width="6" height="48" rx="2" fill="white" opacity="0.5"/>
-  <rect x="62" y="83" width="22" height="3" rx="1.5" fill="#6366f1" opacity="0.6"/>
-  <rect x="62" y="91" width="18" height="3" rx="1.5" fill="#6366f1" opacity="0.4"/>
-  <rect x="62" y="99" width="20" height="3" rx="1.5" fill="#6366f1" opacity="0.4"/>
-  <rect x="62" y="107" width="15" height="3" rx="1.5" fill="#6366f1" opacity="0.3"/>
+  <!-- Vertical guide -->
+  <rect x="60" y="74" width="3" height="72" rx="1.5" fill="url(#accentLine)" filter="url(#softglow)"/>
+  <!-- Bars -->
+  <rect x="68" y="74"  width="60" height="7" rx="2" fill="#ffffff"/>
+  <rect x="68" y="89"  width="42" height="6" rx="2" fill="#ffffff" opacity="0.6"/>
+  <rect x="68" y="102" width="28" height="6" rx="2" fill="#ffffff" opacity="0.38"/>
+  <rect x="68" y="115" width="50" height="6" rx="2" fill="#ffffff" opacity="0.6"/>
+  <rect x="68" y="128" width="56" height="7" rx="2" fill="#ffffff" opacity="0.82"/>
+  <!-- Dot -->
+  <circle cx="129" cy="143" r="3.5" fill="url(#accentLine)" filter="url(#softglow)"/>
 
-  <!-- Sparkle big -->
-  <g transform="translate(104, 80)" filter="url(#glow)">
-    <path d="M0,-12 L2.8,-2.8 L12,0 L2.8,2.8 L0,12 L-2.8,2.8 L-12,0 L-2.8,-2.8 Z" fill="white" opacity="0.95"/>
-  </g>
-  <!-- Sparkle small -->
-  <g transform="translate(114, 104)">
-    <path d="M0,-7 L1.6,-1.6 L7,0 L1.6,1.6 L0,7 L-1.6,1.6 L-7,0 L-1.6,-1.6 Z" fill="white" opacity="0.65"/>
-  </g>
+  <!-- ── Wordmark ──────────────────────────────────── -->
+  <text x="168" y="128"
+    font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif"
+    font-size="58" font-weight="800" letter-spacing="-2"
+    fill="#ffffff">structured</text>
 
-  <!-- Main title -->
-  <text x="148" y="112" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="52" font-weight="800" fill="url(#textGrad)" filter="url(#glow)">SyllabusAI</text>
+  <!-- Accent underline -->
+  <rect x="168" y="139" width="340" height="3" rx="1.5" fill="url(#accentLine)" opacity="0.7"/>
 
   <!-- Tagline -->
-  <text x="150" y="140" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" font-weight="400" fill="white" opacity="0.55">Умный органайзер силлабусов на базе ИИ</text>
+  <text x="170" y="165"
+    font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif"
+    font-size="16" font-weight="400" letter-spacing="0.3"
+    fill="#8b949e">AI-powered syllabus organizer</text>
 
-  <!-- Badges row -->
-  <rect x="150" y="155" width="80" height="24" rx="12" fill="#6366f1" opacity="0.3"/>
-  <text x="190" y="171" font-family="sans-serif" font-size="11" font-weight="600" fill="#a5b4fc" text-anchor="middle">Next.js 16</text>
+  <!-- ── Right badges ──────────────────────────────── -->
+  <!-- Next.js -->
+  <rect x="660" y="72" width="90" height="26" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text x="705" y="89" font-family="monospace" font-size="11" font-weight="600" fill="#e6edf3" text-anchor="middle">Next.js 16</text>
 
-  <rect x="238" y="155" width="72" height="24" rx="12" fill="#a855f7" opacity="0.3"/>
-  <text x="274" y="171" font-family="sans-serif" font-size="11" font-weight="600" fill="#d8b4fe" text-anchor="middle">Claude AI</text>
+  <!-- Claude AI -->
+  <rect x="760" y="72" width="96" height="26" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text x="808" y="89" font-family="monospace" font-size="11" font-weight="600" fill="#6ee7fa" text-anchor="middle">Claude AI</text>
 
-  <rect x="318" y="155" width="68" height="24" rx="12" fill="#0ea5e9" opacity="0.25"/>
-  <text x="352" y="171" font-family="sans-serif" font-size="11" font-weight="600" fill="#7dd3fc" text-anchor="middle">SQLite</text>
+  <!-- TypeScript -->
+  <rect x="660" y="106" width="90" height="26" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text x="705" y="123" font-family="monospace" font-size="11" font-weight="600" fill="#4f8ef7" text-anchor="middle">TypeScript</text>
 
-  <rect x="394" y="155" width="78" height="24" rx="12" fill="#10b981" opacity="0.25"/>
-  <text x="433" y="171" font-family="sans-serif" font-size="11" font-weight="600" fill="#6ee7b7" text-anchor="middle">TypeScript</text>
+  <!-- SQLite -->
+  <rect x="760" y="106" width="96" height="26" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text x="808" y="123" font-family="monospace" font-size="11" font-weight="600" fill="#e6edf3" text-anchor="middle">SQLite</text>
+
+  <!-- Tailwind -->
+  <rect x="660" y="140" width="90" height="26" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text x="705" y="157" font-family="monospace" font-size="11" font-weight="600" fill="#38bdf8" text-anchor="middle">Tailwind 4</text>
+
+  <!-- Prisma -->
+  <rect x="760" y="140" width="96" height="26" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text x="808" y="157" font-family="monospace" font-size="11" font-weight="600" fill="#a8b2d8" text-anchor="middle">Prisma 7</text>
 </svg>
