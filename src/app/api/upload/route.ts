@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { extractTextFromFile } from '@/lib/parser'
-import { structureSyllabus } from '@/lib/structurer'
+import { structureSyllabus, structureSyllabusFromImages } from '@/lib/structurer'
 
 export const maxDuration = 60
 
@@ -14,14 +14,40 @@ export async function POST(req: NextRequest) {
     const contentType = req.headers.get('content-type') ?? ''
 
     if (contentType.includes('application/json')) {
-      // PDF text was extracted client-side — just receive the text
-      const body = await req.json() as { rawText: string; fileName: string; fileSize: number }
+      const body = await req.json() as {
+        rawText?: string
+        images?: { data: string; mediaType: 'image/jpeg' }[]
+        fileName: string
+        fileSize: number
+      }
+      fileName = body.fileName ?? 'document.pdf'
+      fileSize = body.fileSize ?? 0
+
+      if (body.images?.length) {
+        // Scanned PDF — use Claude Vision directly
+        const structured = await structureSyllabusFromImages(body.images)
+        const syllabus = await prisma.syllabus.create({
+          data: {
+            fileName, fileSize,
+            subject: structured.subject,
+            courseCode: structured.courseCode,
+            professor: structured.professor,
+            semester: structured.semester,
+            year: structured.year,
+            rawText: '[Scanned document — processed via Claude Vision]',
+            structured: JSON.stringify(structured),
+            deadlines: { create: (structured.deadlines || []).map((d) => ({ title: d.title, date: d.date ? new Date(d.date) : null, dateText: d.dateText, type: d.type, description: d.description, weight: d.weight })) },
+            grades: { create: (structured.gradeBreakdown || []).map((g) => ({ title: g.title, weight: g.weight, description: g.description })) },
+          },
+          include: { deadlines: true, grades: true },
+        })
+        return NextResponse.json({ success: true, syllabus })
+      }
+
       if (!body.rawText || body.rawText.trim().length < 50) {
         return NextResponse.json({ error: 'No text content provided' }, { status: 400 })
       }
       rawText = body.rawText
-      fileName = body.fileName ?? 'document.pdf'
-      fileSize = body.fileSize ?? 0
     } else {
       // DOCX / TXT — file upload
       const formData = await req.formData()
