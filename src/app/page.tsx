@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { BookOpen, Upload, Calendar, TrendingUp, Bell } from 'lucide-react'
+import { Upload, Calendar, TrendingUp, Bell } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import UploadZone from '@/components/UploadZone'
 import SyllabusCard from '@/components/SyllabusCard'
@@ -58,17 +59,15 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/60 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
-              <BookOpen className="w-5 h-5 text-white" />
-            </div>
+          <Link href="/" className="flex items-center gap-2.5">
+            <Image src="/logo.svg" alt="SyllabusAI" width={36} height={36} className="drop-shadow-md" />
             <div>
               <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                 SyllabusAI
               </h1>
               <p className="text-[10px] text-gray-400 leading-none">Умный органайзер</p>
             </div>
-          </div>
+          </Link>
 
           <nav className="flex items-center gap-2">
             <Link href="/deadlines" className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all">
@@ -156,23 +155,65 @@ export default function Dashboard() {
             <p>Загрузка...</p>
           </div>
         ) : displayed.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-7xl mb-4">📂</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              {isSearching ? 'Ничего не найдено' : 'Нет силлабусов'}
-            </h3>
-            <p className="text-gray-500 mb-6">
-              {isSearching ? 'Попробуй другой запрос' : 'Загрузи первый силлабус чтобы начать'}
-            </p>
-            {!isSearching && (
-              <button
-                onClick={() => setShowUpload(true)}
-                className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
-              >
-                📤 Загрузить силлабус
-              </button>
-            )}
-          </div>
+          isSearching ? (
+            <div className="text-center py-20">
+              <div className="text-6xl mb-3">🔍</div>
+              <h3 className="text-lg font-semibold text-gray-600 mb-1">Ничего не найдено</h3>
+              <p className="text-gray-400 text-sm">Попробуй другой запрос</p>
+            </div>
+          ) : (
+            <div className="mt-4">
+              {/* Hero empty state */}
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-8 sm:p-12 mb-6 text-white shadow-2xl">
+                {/* Background decoration */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+
+                <div className="relative z-10 flex flex-col sm:flex-row items-center gap-8">
+                  <div className="flex-1">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/15 rounded-full text-sm font-medium mb-4 backdrop-blur-sm">
+                      <span>✨</span> AI-powered органайзер
+                    </div>
+                    <h2 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-3">
+                      Прощай,<br/>тонны текста 👋
+                    </h2>
+                    <p className="text-white/75 text-base mb-6 leading-relaxed max-w-md">
+                      Загрузи силлабус — Claude AI за секунды разберёт его и покажет только самое важное: дедлайны, оценки, расписание.
+                    </p>
+                    <button
+                      onClick={() => setShowUpload(true)}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-white text-indigo-700 font-bold rounded-2xl hover:bg-indigo-50 hover:shadow-lg hover:scale-105 transition-all"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Загрузить первый силлабус
+                    </button>
+                  </div>
+                  <div className="flex-shrink-0 grid grid-cols-2 gap-3 text-2xl">
+                    {['📐', '⚛️', '💻', '🧪', '📚', '💰', '🧬', '🧠'].map((e, i) => (
+                      <div key={i} className="w-14 h-14 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center hover:bg-white/20 transition-colors cursor-default">
+                        {e}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[
+                  { icon: '🤖', title: 'AI-парсинг', desc: 'Claude извлекает структуру, цели, темы и дедлайны автоматически' },
+                  { icon: '📅', title: 'Единый трекер', desc: 'Все дедлайны всех предметов в одном месте с цветовой срочностью' },
+                  { icon: '🔍', title: 'Умный поиск', desc: 'Ищи по названию, преподавателю или теме за миллисекунды' },
+                ].map((f) => (
+                  <div key={f.title} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                    <div className="text-3xl mb-3">{f.icon}</div>
+                    <h3 className="font-semibold text-gray-900 mb-1">{f.title}</h3>
+                    <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
         ) : (
           <>
             <div className="flex items-center justify-between mb-4">
