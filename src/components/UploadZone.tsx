@@ -7,32 +7,54 @@ interface UploadZoneProps {
   onUploadSuccess: () => void
 }
 
-async function extractPDFText(file: File, onProgress: (msg: string) => void): Promise<string> {
-  onProgress('📄 Читаем PDF в браузере...')
+async function loadPDF(file: File) {
   const pdfjsLib = await import('pdfjs-dist')
   const { getDocument, GlobalWorkerOptions, version } = pdfjsLib
-  // Worker URL matches the exact version loaded — avoids version mismatch errors
   GlobalWorkerOptions.workerSrc =
     `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`
-
   const arrayBuffer = await file.arrayBuffer()
-  const pdf = await getDocument({ data: arrayBuffer }).promise
-  const totalPages = pdf.numPages
+  return getDocument({ data: arrayBuffer }).promise
+}
 
-  onProgress(`📄 Извлекаем текст из ${totalPages} страниц...`)
-
+async function extractPDFText(
+  pdf: Awaited<ReturnType<typeof loadPDF>>,
+  onProgress: (msg: string) => void
+): Promise<string> {
+  const maxPages = Math.min(pdf.numPages, 40)
+  onProgress(`📄 Извлекаем текст из ${pdf.numPages} страниц...`)
   let text = ''
-  // Extract up to 40 pages — enough for any syllabus
-  const maxPages = Math.min(totalPages, 40)
   for (let i = 1; i <= maxPages; i++) {
     const page = await pdf.getPage(i)
     const content = await page.getTextContent()
-    text += content.items
-      .map((item) => ('str' in item ? item.str : ''))
-      .join(' ') + '\n'
+    text += content.items.map((item) => ('str' in item ? item.str : '')).join(' ') + '\n'
+  }
+  return text.trim()
+}
+
+async function renderPDFToImages(
+  pdf: Awaited<ReturnType<typeof loadPDF>>,
+  onProgress: (msg: string) => void
+): Promise<{ data: string; mediaType: 'image/jpeg' }[]> {
+  // Send first 10 pages — covers all important syllabus info
+  const maxPages = Math.min(pdf.numPages, 10)
+  onProgress(`🖼️ Рендерим ${maxPages} страниц для AI-распознавания...`)
+  const images: { data: string; mediaType: 'image/jpeg' }[] = []
+
+  for (let i = 1; i <= maxPages; i++) {
+    const page = await pdf.getPage(i)
+    const viewport = page.getViewport({ scale: 1.5 })
+    const canvas = document.createElement('canvas')
+    canvas.width = viewport.width
+    canvas.height = viewport.height
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (page as any).render({ canvasContext: canvas.getContext('2d')!, viewport }).promise
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.75)
+    images.push({ data: dataUrl.replace('data:image/jpeg;base64,', ''), mediaType: 'image/jpeg' })
+    canvas.remove()
+    onProgress(`🖼️ Страница ${i}/${maxPages}...`)
   }
 
-  return text.trim()
+  return images
 }
 
 export default function UploadZone({ onUploadSuccess }: UploadZoneProps) {
@@ -55,14 +77,20 @@ export default function UploadZone({ onUploadSuccess }: UploadZoneProps) {
         const isPDF = file.type === 'application/pdf' || file.name.endsWith('.pdf')
 
         if (isPDF) {
-          // Extract text client-side — file never uploaded, any size works
-          rawText = await extractPDFText(file, (msg) => setMessage(msg))
-          if (!rawText || rawText.length < 50) {
-            throw new Error('Не удалось извлечь текст из PDF. Возможно, файл содержит только сканы.')
+          setMessage('📄 Читаем PDF в браузере...')
+          const pdf = await loadPDF(file)
+          rawText = await extractPDFText(pdf, (msg) => setMessage(msg))
+
+          if (!rawText || rawText.length < 100) {
+            // Scanned PDF — render pages and use Claude Vision
+            const images = await renderPDFToImages(pdf, (msg) => setMessage(msg))
+            setMessage('🤖 Claude читает скан силлабуса...')
+            body = JSON.stringify({ images, fileName: file.name, fileSize: file.size })
+          } else {
+            body = JSON.stringify({ rawText, fileName: file.name, fileSize: file.size })
+            setMessage('🤖 AI анализирует силлабус...')
           }
-          body = JSON.stringify({ rawText, fileName: file.name, fileSize: file.size })
           headers = { 'Content-Type': 'application/json' }
-          setMessage('🤖 AI анализирует силлабус...')
         } else {
           // DOCX / TXT — upload file normally
           if (file.size > 50 * 1024 * 1024) {
