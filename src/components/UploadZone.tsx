@@ -1,10 +1,35 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Upload, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { Upload, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 
 interface UploadZoneProps {
   onUploadSuccess: () => void
+}
+
+async function extractPDFText(file: File, onProgress: (msg: string) => void): Promise<string> {
+  onProgress('📄 Читаем PDF в браузере...')
+  const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist')
+  GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+
+  const arrayBuffer = await file.arrayBuffer()
+  const pdf = await getDocument({ data: arrayBuffer }).promise
+  const totalPages = pdf.numPages
+
+  onProgress(`📄 Извлекаем текст из ${totalPages} страниц...`)
+
+  let text = ''
+  // Extract up to 40 pages — enough for any syllabus
+  const maxPages = Math.min(totalPages, 40)
+  for (let i = 1; i <= maxPages; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    text += content.items
+      .map((item) => ('str' in item ? item.str : ''))
+      .join(' ') + '\n'
+  }
+
+  return text.trim()
 }
 
 export default function UploadZone({ onUploadSuccess }: UploadZoneProps) {
@@ -17,25 +42,48 @@ export default function UploadZone({ onUploadSuccess }: UploadZoneProps) {
     async (file: File) => {
       setIsUploading(true)
       setStatus('idle')
-      setMessage(`⚡ Analyzing "${file.name}"...`)
-
-      const formData = new FormData()
-      formData.append('file', file)
+      setMessage(`⚡ Обрабатываем "${file.name}"...`)
 
       try {
-        const res = await fetch('/api/upload', { method: 'POST', body: formData })
+        let body: FormData | string
+        let headers: HeadersInit = {}
+        let rawText = ''
+
+        const isPDF = file.type === 'application/pdf' || file.name.endsWith('.pdf')
+
+        if (isPDF) {
+          // Extract text client-side — file never uploaded, any size works
+          rawText = await extractPDFText(file, (msg) => setMessage(msg))
+          if (!rawText || rawText.length < 50) {
+            throw new Error('Не удалось извлечь текст из PDF. Возможно, файл содержит только сканы.')
+          }
+          body = JSON.stringify({ rawText, fileName: file.name, fileSize: file.size })
+          headers = { 'Content-Type': 'application/json' }
+          setMessage('🤖 AI анализирует силлабус...')
+        } else {
+          // DOCX / TXT — upload file normally
+          if (file.size > 50 * 1024 * 1024) {
+            throw new Error('Файл слишком большой. Максимум 50MB для DOCX/TXT.')
+          }
+          const formData = new FormData()
+          formData.append('file', file)
+          body = formData
+          setMessage('🤖 AI анализирует силлабус...')
+        }
+
+        const res = await fetch('/api/upload', { method: 'POST', body, headers })
         const text = await res.text()
         let data: { error?: string; syllabus?: { subject: string } }
         try {
           data = JSON.parse(text)
         } catch {
-          throw new Error(`Server error (${res.status}): ${text.slice(0, 200)}`)
+          throw new Error(`Server error (${res.status}): ${text.slice(0, 300)}`)
         }
 
         if (!res.ok) throw new Error(data.error || 'Upload failed')
 
         setStatus('success')
-        setMessage(`✅ "${data.syllabus?.subject}" added successfully!`)
+        setMessage(`✅ "${data.syllabus?.subject}" добавлен!`)
         onUploadSuccess()
       } catch (error) {
         setStatus('error')
@@ -79,7 +127,7 @@ export default function UploadZone({ onUploadSuccess }: UploadZoneProps) {
           {isUploading ? (
             <>
               <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
-              <p className="text-sm text-indigo-600 font-medium">🤖 AI анализирует силлабус...</p>
+              <p className="text-sm text-indigo-600 font-medium">{message}</p>
             </>
           ) : (
             <>
@@ -91,7 +139,7 @@ export default function UploadZone({ onUploadSuccess }: UploadZoneProps) {
                   Перетащи силлабус сюда или{' '}
                   <span className="text-indigo-600">нажми для выбора</span>
                 </p>
-                <p className="text-xs text-gray-500 mt-1">PDF, DOC, DOCX до 10MB</p>
+                <p className="text-xs text-gray-500 mt-1">PDF любого размера · DOCX до 50MB</p>
               </div>
             </>
           )}
@@ -105,22 +153,18 @@ export default function UploadZone({ onUploadSuccess }: UploadZoneProps) {
         />
       </label>
 
-      {message && (
+      {!isUploading && message && (
         <div
           className={`mt-3 p-3 rounded-xl text-sm flex items-center gap-2 ${
             status === 'success'
               ? 'bg-green-50 text-green-700 border border-green-200'
-              : status === 'error'
-              ? 'bg-red-50 text-red-700 border border-red-200'
-              : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+              : 'bg-red-50 text-red-700 border border-red-200'
           }`}
         >
           {status === 'success' ? (
             <CheckCircle className="w-4 h-4 shrink-0" />
-          ) : status === 'error' ? (
-            <AlertCircle className="w-4 h-4 shrink-0" />
           ) : (
-            <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+            <AlertCircle className="w-4 h-4 shrink-0" />
           )}
           {message}
         </div>

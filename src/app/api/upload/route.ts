@@ -7,37 +7,40 @@ export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData()
-    const file = formData.get('file') as File | null
+    let rawText: string
+    let fileName: string
+    let fileSize: number
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+    const contentType = req.headers.get('content-type') ?? ''
+
+    if (contentType.includes('application/json')) {
+      // PDF text was extracted client-side — just receive the text
+      const body = await req.json() as { rawText: string; fileName: string; fileSize: number }
+      if (!body.rawText || body.rawText.trim().length < 50) {
+        return NextResponse.json({ error: 'No text content provided' }, { status: 400 })
+      }
+      rawText = body.rawText
+      fileName = body.fileName ?? 'document.pdf'
+      fileSize = body.fileSize ?? 0
+    } else {
+      // DOCX / TXT — file upload
+      const formData = await req.formData()
+      const file = formData.get('file') as File | null
+      if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+
+      if (file.size > 50 * 1024 * 1024) {
+        return NextResponse.json({ error: 'File too large. Maximum 50MB for DOCX/TXT.' }, { status: 400 })
+      }
+
+      const buffer = Buffer.from(await file.arrayBuffer())
+      rawText = await extractTextFromFile(buffer, file.type, file.name)
+      fileName = file.name
+      fileSize = file.size
     }
-
-    const allowedTypes = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/msword',
-      'text/plain',
-    ]
-
-    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(pdf|doc|docx|txt)$/i)) {
-      return NextResponse.json(
-        { error: 'Unsupported file type. Please upload PDF, DOC, DOCX, or TXT files.' },
-        { status: 400 }
-      )
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File too large. Maximum size is 10MB.' }, { status: 400 })
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer())
-    const rawText = await extractTextFromFile(buffer, file.type, file.name)
 
     if (!rawText || rawText.trim().length < 100) {
       return NextResponse.json(
-        { error: 'Could not extract text from file. Please ensure the file is not empty or image-only.' },
+        { error: 'Could not extract text. Make sure the file is not empty or image-only.' },
         { status: 400 }
       )
     }
@@ -46,8 +49,8 @@ export async function POST(req: NextRequest) {
 
     const syllabus = await prisma.syllabus.create({
       data: {
-        fileName: file.name,
-        fileSize: file.size,
+        fileName,
+        fileSize,
         subject: structured.subject,
         courseCode: structured.courseCode,
         professor: structured.professor,
