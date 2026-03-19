@@ -6,15 +6,9 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-function resolveDbPath(): string {
-  const url = process.env.DATABASE_URL ?? 'file:./dev.db'
-  // Strip "file:" prefix and resolve relative to project root
-  const filePath = url.replace(/^file:/, '')
-  return path.resolve(process.cwd(), filePath)
-}
-
 function createPrismaClient() {
-  const dbPath = resolveDbPath()
+  // Always use prisma/dev.db — matches prisma.config.ts fallback and prisma CLI output
+  const dbPath = path.join(process.cwd(), 'prisma', 'dev.db')
   const adapter = new PrismaBetterSqlite3({ url: dbPath })
   return new PrismaClient({ adapter } as ConstructorParameters<typeof PrismaClient>[0])
 }
