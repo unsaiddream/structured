@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import DotGrid from "@/components/DotGrid";
 
 export const metadata: Metadata = {
   title: "structured — AI syllabus organizer",
@@ -17,7 +18,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <DotGrid />
+        <div className="relative flex flex-col min-h-full" style={{ zIndex: 1 }}>
+          {children}
+        </div>
+      </body>
     </html>
   );
 }

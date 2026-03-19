@@ -102,7 +102,7 @@ export default function DeadlinesPage() {
   })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/20 to-purple-50/20">
+    <div className="min-h-screen bg-white/60">
       <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-md border-b border-gray-200/60 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 transition-colors">
