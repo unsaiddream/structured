@@ -145,24 +145,23 @@ ${rawText.slice(0, 15000)}`
   return parsed
 }
 
-const VISION_PROMPT = `You are digitizing a scanned university syllabus. Do exactly two things:
+const VISION_PROMPT = `You are digitizing a scanned university syllabus. Do exactly two things and respond in the format below.
 
-PART 1 — Full text:
-Extract ALL text from the scanned pages exactly as it appears. Preserve every heading, table (as aligned plain text), list, policy, schedule row, grade weight, contact info — everything readable. Keep the reading order and use line breaks to maintain structure.
+STEP 1 — Extract the COMPLETE TEXT of the document exactly as it appears: all headings, tables (as plain text), lists, policies, schedules, grades, contact info. Keep line breaks to preserve structure.
 
-PART 2 — Structured data:
-Extract key fields as JSON.
+STEP 2 — Extract key fields as a JSON object.
 
-Respond ONLY in this exact format (no extra text outside the tags):
+Your response MUST use this exact format with these exact markers on their own lines:
 
-<fulltext>
+===FULLTEXT===
 [complete document text here]
-</fulltext>
-<json>
-{"subject":"Full course name","courseCode":"CS101","professor":"Name","semester":"Fall","year":2024,"credits":3,"schedule":"Days/times","room":"Location","officeHours":"Hours","description":"1-2 sentence summary","objectives":["objective"],"topics":[{"week":"Week 1","date":"Jan 15","title":"Topic","description":"Brief"}],"gradeBreakdown":[{"title":"Midterm","weight":25,"description":"Details"}],"deadlines":[{"title":"Assignment 1","date":"2024-02-15","dateText":"Feb 15","type":"assignment","description":"Details","weight":10}],"requiredMaterials":["Textbook"],"policies":[{"title":"Attendance","content":"Policy text"}],"contactInfo":{"email":"prof@uni.edu","phone":"555-1234","officeLocation":"Bldg 101"}}
-</json>
+===ENDFULLTEXT===
 
-Rules for JSON: deadline types are "assignment","exam","quiz","project","other". Dates in YYYY-MM-DD. Weights are numbers (percentages).`
+===JSON===
+{"subject":"Full course name","courseCode":"CS101","professor":"Name","semester":"Fall","year":2024,"credits":3,"schedule":"Days/times","room":"Location","officeHours":"Hours","description":"1-2 sentence summary","objectives":["objective"],"topics":[{"week":"Week 1","date":"Jan 15","title":"Topic","description":"Brief"}],"gradeBreakdown":[{"title":"Midterm","weight":25,"description":"Details"}],"deadlines":[{"title":"Assignment 1","date":"2024-02-15","dateText":"Feb 15","type":"assignment","description":"Details","weight":10}],"requiredMaterials":["Textbook"],"policies":[{"title":"Attendance","content":"Policy text"}],"contactInfo":{"email":"prof@uni.edu","phone":"555-1234","officeLocation":"Bldg 101"}}
+===ENDJSON===
+
+Rules for JSON: deadline types are "assignment","exam","quiz","project","other". Dates in YYYY-MM-DD. Weights are percentages (numbers only).`
 
 export async function structureSyllabusFromImages(
   images: { data: string; mediaType: 'image/jpeg' }[]
@@ -186,16 +185,27 @@ export async function structureSyllabusFromImages(
 
   const text = responseContent.text.trim()
 
-  // Extract full text between <fulltext> tags
-  const fulltextMatch = text.match(/<fulltext>\s*([\s\S]*?)\s*<\/fulltext>/)
+  // Extract full text
+  const fulltextMatch = text.match(/===FULLTEXT===\s*([\s\S]*?)\s*===ENDFULLTEXT===/)
   const rawText = fulltextMatch ? fulltextMatch[1].trim() : ''
 
-  // Extract JSON between <json> tags
-  const jsonTagMatch = text.match(/<json>\s*([\s\S]*?)\s*<\/json>/)
-  let jsonText = jsonTagMatch ? jsonTagMatch[1].trim() : text
-  // Fallback: strip markdown code fences if present
-  const fenceMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
-  if (fenceMatch) jsonText = fenceMatch[1]
+  // Extract JSON — try markers first, then code fences, then first { } block
+  let jsonText: string | null = null
+  const markerMatch = text.match(/===JSON===\s*([\s\S]*?)\s*===ENDJSON===/)
+  if (markerMatch) {
+    jsonText = markerMatch[1].trim()
+  } else {
+    const fenceMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
+    if (fenceMatch) {
+      jsonText = fenceMatch[1]
+    } else {
+      // Last resort: grab the largest {...} block in the response
+      const objectMatch = text.match(/\{[\s\S]*\}/)
+      if (objectMatch) jsonText = objectMatch[0]
+    }
+  }
+
+  if (!jsonText) throw new Error('Could not extract JSON from Claude Vision response')
 
   const parsed = JSON.parse(jsonText) as StructuredSyllabus
   parsed.emoji = getSubjectEmoji(parsed.subject)
